@@ -1,0 +1,23 @@
+{
+  "appid": "wxde1988d3e350118b",
+  "libVersion": "3.8.0",
+  "projectname": "%E5%A4%9A%E7%B1%B3%E7%BD%97%E7%9B%98",
+  "setting": {
+    "urlCheck": false,
+    "coverView": true,
+    "lazyloadPlaceholderEnable": false,
+    "skylineRenderEnable": false,
+    "preloadBackgroundData": false,
+    "autoAudits": false,
+    "useApiHook": true,
+    "showShadowRootInWxmlPanel": false,
+    "useStaticServer": false,
+    "useLanDebug": false,
+    "showES6CompileOption": false,
+    "compileHotReLoad": true,
+    "checkInvalidKey": true,
+    "ignoreDevUnusedFiles": false,
+    "bigPackageSizeSupport": false
+  },
+  "condition": {}
+}

@@ -1,0 +1,29 @@
+page {
+  background: #03070f;
+  color: #d7f6ff;
+  font-family: "PingFang SC", "Helvetica Neue", sans-serif;
+}
+
+.up { color: #ff3b5c; }
+.down { color: #19e6a0; }
+.flat { color: #6f8fa3; }
+
+.legal {
+  padding: 32rpx 36rpx 80rpx;
+  color: #c5d8e4;
+  font-size: 28rpx;
+  line-height: 1.75;
+}
+
+.legal h2,
+.legal .h {
+  color: #3df2ff;
+  font-size: 32rpx;
+  margin: 28rpx 0 12rpx;
+  font-weight: 700;
+}
+
+.legal .lead {
+  color: #d7f6ff;
+  margin-bottom: 20rpx;
+}

@@ -1,0 +1,168 @@
+<view class="stage">
+  <view class="wrap">
+    <view class="topbar">
+      <view class="brand">
+        <view class="logo"><text>多</text></view>
+        <view>
+          <view class="title">多米罗盘</view>
+          <view class="sub">公开盘面学习看板</view>
+        </view>
+      </view>
+      <view class="livebox">
+        <view class="clock">{{clock}}</view>
+        <view class="badge">
+          <view class="dot {{live ? 'hot' : 'off'}}"></view>
+          {{statusLabel}} · 北京时间
+        </view>
+      </view>
+    </view>
+
+    <view class="kpis">
+      <view class="panel spark-panel">
+        <view class="kpi-label">上证净流入观察 / 分时</view>
+        <view class="kpi-value {{shMainNetClass}}">{{shMainNetText}}</view>
+        <canvas type="2d" id="spark" class="spark"></canvas>
+      </view>
+      <view class="panel" wx:for="{{indices}}" wx:key="code">
+        <view class="kpi-label">{{item.name}}</view>
+        <view class="kpi-value price">{{item.priceText}}</view>
+        <view class="kpi-sub {{item.cls}}">{{item.pctText}}</view>
+      </view>
+    </view>
+
+    <view class="kpis four">
+      <view class="panel">
+        <view class="kpi-label">板块观察合计</view>
+        <view class="kpi-value {{boardSumClass}}">{{boardSumText}}</view>
+      </view>
+      <view class="panel">
+        <view class="kpi-label">净流入靠前板块</view>
+        <view class="kpi-value small">{{topBoardName}}</view>
+        <view class="kpi-sub {{topBoardClass}}">{{topBoardNet}}</view>
+      </view>
+      <view class="panel">
+        <view class="kpi-label">净流入靠前个股</view>
+        <view class="kpi-value small">{{topStockName}}</view>
+        <view class="kpi-sub {{topStockClass}}">{{topStockNet}}</view>
+      </view>
+      <view class="panel">
+        <view class="kpi-label">沪深成交额</view>
+        <view class="kpi-value">{{twoMarketText}}</view>
+      </view>
+    </view>
+
+    <view class="toolbar">
+      <view class="seg">
+        <view
+          wx:for="{{periods}}"
+          wx:key="id"
+          class="seg-btn {{period === item.id ? 'on' : ''}}"
+          data-id="{{item.id}}"
+          bindtap="setPeriod"
+        >{{item.label}}</view>
+      </view>
+      <view class="seg">
+        <view class="seg-btn {{order === 'in' ? 'on' : ''}}" data-id="in" bindtap="setOrder">净流入观察</view>
+        <view class="seg-btn {{order === 'out' ? 'on' : ''}}" data-id="out" bindtap="setOrder">净流出观察</view>
+      </view>
+    </view>
+    <input class="search" placeholder="搜索名称或代码（学习查询）" value="{{query}}" bindinput="onQuery" />
+
+    <view wx:if="{{error}}" class="err">{{error}}</view>
+
+    <view class="panel" wx:if="{{tab !== 'stock'}}">
+      <view class="toolbar tight">
+        <view class="kpi-label">板块资金观察</view>
+        <view class="seg">
+          <view class="seg-btn {{boardKind === 'industry' ? 'on' : ''}}" data-id="industry" bindtap="setBoardKind">行业</view>
+          <view class="seg-btn {{boardKind === 'concept' ? 'on' : ''}}" data-id="concept" bindtap="setBoardKind">概念</view>
+        </view>
+      </view>
+      <view class="heat">
+        <view
+          wx:for="{{boardsView}}"
+          wx:key="code"
+          class="tile"
+          style="background: {{item.bg}};"
+          data-item="{{item}}"
+          bindtap="openBoard"
+        >
+          <view class="name">{{item.name}}</view>
+          <view class="net {{item.netCls}}">{{item.netText}}</view>
+          <view class="meta {{item.pctCls}}">{{item.pctText}} {{item.leaderName ? '· ' + item.leaderName : ''}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="panel stock-panel" wx:if="{{tab !== 'board'}}">
+      <view class="kpi-label">个股净流入观察</view>
+      <view
+        wx:for="{{stocksView}}"
+        wx:key="code"
+        class="row"
+        data-item="{{item}}"
+        bindtap="openStock"
+      >
+        <text class="rank">{{item.rank}}</text>
+        <view class="grow">
+          <view>{{item.name}} <text class="flat">{{item.code}}</text></view>
+          <view class="bar"><view class="bar-i" style="width: {{item.bar}}; background: {{item.barColor}};"></view></view>
+        </view>
+        <view class="num">
+          <view class="{{item.netCls}}">{{item.netText}}</view>
+          <view class="{{item.pctCls}}">{{item.pctText}}</view>
+        </view>
+      </view>
+    </view>
+
+    <view class="foot">公开行情学习展示 · 数据可能延迟 · 不构成投资建议</view>
+    <view class="legal-links">
+      <text bindtap="goAbout">关于</text>
+      <text bindtap="goAgreement">用户协议</text>
+      <text bindtap="goPrivacy">隐私政策</text>
+      <text bindtap="goDisclaimer">免责声明</text>
+    </view>
+  </view>
+
+  <view class="tabbar">
+    <view class="tab {{tab === 'radar' ? 'on' : ''}}" data-tab="radar" bindtap="setTab">看板</view>
+    <view class="tab {{tab === 'board' ? 'on' : ''}}" data-tab="board" bindtap="setTab">板块</view>
+    <view class="tab {{tab === 'stock' ? 'on' : ''}}" data-tab="stock" bindtap="setTab">个股</view>
+    <view class="tab" bindtap="goAbout">关于</view>
+  </view>
+
+  <view wx:if="{{picked}}" class="mask" bindtap="closeDetail"></view>
+  <view wx:if="{{picked}}" class="drawer">
+    <view class="kpi-label">{{pickedKind === 'board' ? picked.code : '资金结构观察'}}</view>
+    <view class="drawer-title">{{picked.name}}</view>
+    <view class="kpi-value {{pickedNetClass}}">{{pickedNet}}</view>
+    <view class="kpi-sub {{pickedNetClass}}">{{pickedPct}}</view>
+    <view class="stack">
+      <view wx:for="{{parts}}" wx:key="k" class="stack-i" style="width: {{item.width}}; background: {{item.c}}; opacity: {{item.opacity}};"></view>
+    </view>
+    <view class="kpis four">
+      <view class="panel" wx:for="{{parts}}" wx:key="k">
+        <view class="kpi-label">{{item.k}}</view>
+        <view class="kpi-value small {{item.cls}}">{{item.text}}</view>
+      </view>
+    </view>
+    <block wx:if="{{pickedKind === 'board'}}">
+      <view class="kpi-label">成分股观察列表</view>
+      <view wx:for="{{membersView}}" wx:key="code" class="row" data-item="{{item}}" bindtap="openStock">
+        <text class="rank">{{item.rank}}</text>
+        <view class="grow">{{item.name}} {{item.code}}</view>
+        <view class="num {{item.netCls}}">{{item.netText}}</view>
+      </view>
+    </block>
+    <view class="close" bindtap="closeDetail">关闭</view>
+  </view>
+
+  <view wx:if="{{showGate}}" class="gate">
+    <view class="gate-card">
+      <view class="gate-title">使用说明</view>
+      <view class="gate-body">多米罗盘仅提供公开行情的学习展示，不构成投资建议，不提供交易、荐股或收益承诺。继续使用前请阅读免责声明。</view>
+      <view class="gate-link" bindtap="goDisclaimer">查看《免责声明》</view>
+      <view class="gate-btn" bindtap="acceptGate">我已知悉，仅用于学习</view>
+    </view>
+  </view>
+</view>

@@ -1,0 +1,18 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/about/about",
+    "pages/agreement/agreement",
+    "pages/privacy/privacy",
+    "pages/disclaimer/disclaimer"
+  ],
+  "window": {
+    "navigationBarTitleText": "多米罗盘",
+    "navigationBarBackgroundColor": "#03070f",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#03070f",
+    "backgroundTextStyle": "light"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}
