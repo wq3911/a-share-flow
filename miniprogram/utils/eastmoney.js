@@ -64,6 +64,7 @@ const FS = {
   industry: "m:90+t:2",
   concept: "m:90+t:3",
   stock: "m:0+t:6+f:!2,m:0+t:13+f:!2,m:0+t:80+f:!2,m:1+t:2+f:!2,m:1+t:23+f:!2",
+  etf: "b:MK0021",
 };
 
 function periodFieldList(period) {
@@ -117,7 +118,7 @@ async function eastmoneyJson(pathAndQuery) {
       lastError = error instanceof Error ? error.message : "fetch failed";
     }
   }
-  throw new Error(`东财接口不可用：${lastError}`);
+  throw new Error(`数据暂不可用：${lastError}`);
 }
 
 function mapRow(item, period) {
@@ -182,22 +183,7 @@ async function fetchIndices() {
   }));
 }
 
-async function fetchShanghaiFlow() {
-  const json = await eastmoneyJson(
-    "/api/qt/stock/fflow/kline/get?lmt=0&klt=1&secid=1.000001&fields1=f1,f2,f3,f7&fields2=f51,f52,f53,f54,f55,f56",
-  );
-  const klines = (json.data && json.data.klines) || [];
-  const series = klines.map((line) => toNumber(String(line).split(",")[1]));
-  const step = Math.max(1, Math.floor(series.length / 48));
-  const sampled = series.filter((_, i) => i % step === 0 || i === series.length - 1);
-  return {
-    latest: series.length ? series[series.length - 1] : 0,
-    series: sampled,
-  };
-}
-
 module.exports = {
   fetchFlowList,
   fetchIndices,
-  fetchShanghaiFlow,
 };

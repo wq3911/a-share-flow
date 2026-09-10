@@ -82,7 +82,6 @@
 }
 
 .kpis.four { grid-template-columns: 1fr 1fr; }
-.spark-panel { grid-column: 1 / -1; }
 
 .panel {
   position: relative;
@@ -106,8 +105,6 @@
 .kpi-value.small { font-size: 28rpx; }
 .kpi-value.price { font-size: 30rpx; }
 .kpi-sub { margin-top: 6rpx; font-size: 22rpx; }
-
-.spark { width: 100%; height: 80rpx; margin-top: 8rpx; }
 
 .toolbar {
   display: flex;
@@ -169,6 +166,13 @@
 
 .rank { color: #ffc24b; font-size: 22rpx; width: 48rpx; }
 .grow { flex: 1; }
+.code {
+  color: #6f8fa3;
+  font-size: 22rpx;
+  font-weight: 400;
+  margin-left: 8rpx;
+  letter-spacing: 1rpx;
+}
 .bar { height: 8rpx; margin-top: 10rpx; background: rgba(255,255,255,0.06); }
 .bar-i { height: 100%; }
 .num { text-align: right; font-size: 22rpx; }
@@ -207,8 +211,8 @@
   text-align: center;
   padding: 24rpx 0;
   color: #6f8fa3;
-  letter-spacing: 4rpx;
-  font-size: 24rpx;
+  font-size: 22rpx;
+  letter-spacing: 2rpx;
 }
 
 .tab.on { color: #3df2ff; }

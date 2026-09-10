@@ -1,23 +1,25 @@
 const {
   fetchFlowList,
   fetchIndices,
-  fetchShanghaiFlow,
 } = require("../../utils/eastmoney");
 const {
-  formatYi,
+  formatQty,
   formatPct,
   formatPrice,
   signedClass,
   marketStatus,
   STATUS_LABEL,
   heatColor,
+  aliasIndexName,
+  aliasSampleName,
+  maskFinanceWords,
 } = require("../../utils/format");
 
 const PERIODS = [
-  { id: "today", label: "今日" },
-  { id: "3d", label: "3日" },
-  { id: "5d", label: "5日" },
-  { id: "10d", label: "10日" },
+  { id: "today", label: "当日" },
+  { id: "3d", label: "三日" },
+  { id: "5d", label: "五日" },
+  { id: "10d", label: "十日" },
 ];
 
 Page({
@@ -31,19 +33,21 @@ Page({
     statusLabel: "同步中",
     live: false,
     indices: [],
-    shMainNetText: "0.00",
-    shMainNetClass: "flat",
     boardSumText: "0.00",
     boardSumClass: "flat",
-    twoMarketText: "0.00",
     topBoardName: "--",
     topBoardNet: "0.00",
     topBoardClass: "flat",
     topStockName: "--",
     topStockNet: "0.00",
     topStockClass: "flat",
+    topEtfName: "--",
+    topEtfCode: "",
+    topEtfNet: "0.00",
+    topEtfClass: "flat",
     boardsView: [],
     stocksView: [],
+    etfsView: [],
     error: "",
     picked: null,
     pickedKind: "stock",
@@ -59,9 +63,8 @@ Page({
   onLoad() {
     this._rawBoards = [];
     this._rawStocks = [];
-    this._shSeries = [];
+    this._rawEtfs = [];
     this._indices = [];
-    this._shMainNet = 0;
     this.setData({ showGate: !wx.getStorageSync("disclaimer_ok") });
     this.load();
     this._clock = setInterval(() => this.tick(), 1000);
@@ -72,10 +75,6 @@ Page({
   onUnload() {
     clearInterval(this._clock);
     clearInterval(this._refresh);
-  },
-
-  onReady() {
-    this.drawSpark();
   },
 
   tick() {
@@ -96,9 +95,8 @@ Page({
 
   async load() {
     try {
-      const [idx, sh, b, s] = await Promise.all([
+      const [idx, b, s, e] = await Promise.all([
         fetchIndices(),
-        fetchShanghaiFlow(),
         fetchFlowList({
           kind: this.data.boardKind,
           period: this.data.period,
@@ -113,14 +111,19 @@ Page({
           pn: 1,
           pz: 80,
         }),
+        fetchFlowList({
+          kind: "etf",
+          period: this.data.period,
+          order: this.data.order,
+          pn: 1,
+          pz: 80,
+        }),
       ]);
       this._rawBoards = b.list;
       this._rawStocks = s.list;
-      this._shSeries = sh.series;
+      this._rawEtfs = e.list;
       this._indices = idx;
-      this._shMainNet = sh.latest;
       this.applyView();
-      this.drawSpark();
     } catch (e) {
       this.setData({ error: e.message || "加载失败" });
     }
@@ -128,90 +131,105 @@ Page({
 
   applyView() {
     const indices = this._indices || [];
-    const shMainNet = this._shMainNet || 0;
     const boards = this._rawBoards;
     const stocks = this._rawStocks;
+    const etfs = this._rawEtfs || [];
     const maxAbs = Math.max(...boards.map((x) => Math.abs(x.mainNet)), 1);
     const topAbs = Math.max(Math.abs((stocks[0] && stocks[0].mainNet) || 1), 1);
+    const etfAbs = Math.max(Math.abs((etfs[0] && etfs[0].mainNet) || 1), 1);
     const boardSum = boards.reduce((sum, x) => sum + x.mainNet, 0);
-    const twoMarket = ((indices[0] && indices[0].amount) || 0) + ((indices[1] && indices[1].amount) || 0);
-    const q = this.data.query.trim();
-    const filtered = stocks.filter((x) => !q || x.name.includes(q) || x.code.includes(q));
+    const q = this.data.query.trim().toLowerCase();
+    const matchItem = (x) => {
+      if (!q) return true;
+      const alias = aliasSampleName(x.name).toLowerCase();
+      return (
+        (x.name && x.name.toLowerCase().includes(q)) ||
+        (x.code && String(x.code).toLowerCase().includes(q)) ||
+        alias.includes(q)
+      );
+    };
+    const filtered = stocks.filter(matchItem);
+    const filteredEtfs = etfs.filter(matchItem);
     const topBoard = boards[0];
     const topStock = stocks[0];
+    const topEtf = etfs[0];
     this.setData({
       error: "",
       indices: indices.map((x) => ({
         ...x,
+        name: aliasIndexName(x.code),
         priceText: formatPrice(x.price),
         pctText: formatPct(x.changePct),
         cls: signedClass(x.changePct),
       })),
-      shMainNetText: formatYi(shMainNet),
-      shMainNetClass: signedClass(shMainNet),
-      boardSumText: formatYi(boardSum),
+      boardSumText: formatQty(boardSum),
       boardSumClass: signedClass(boardSum),
-      twoMarketText: formatYi(twoMarket),
-      topBoardName: (topBoard && topBoard.name) || "--",
-      topBoardNet: formatYi((topBoard && topBoard.mainNet) || 0),
+      topBoardName: topBoard ? maskFinanceWords(topBoard.name) : "--",
+      topBoardNet: formatQty((topBoard && topBoard.mainNet) || 0),
       topBoardClass: signedClass((topBoard && topBoard.mainNet) || 0),
-      topStockName: (topStock && topStock.name) || "--",
-      topStockNet: formatYi((topStock && topStock.mainNet) || 0),
+      topStockName: topStock ? aliasSampleName(topStock.name) : "--",
+      topStockNet: formatQty((topStock && topStock.mainNet) || 0),
       topStockClass: signedClass((topStock && topStock.mainNet) || 0),
+      topEtfName: topEtf ? maskFinanceWords(topEtf.name) : "--",
+      topEtfCode: (topEtf && topEtf.code) || "",
+      topEtfNet: formatQty((topEtf && topEtf.mainNet) || 0),
+      topEtfClass: signedClass((topEtf && topEtf.mainNet) || 0),
       boardsView: boards.slice(0, 16).map((x) => ({
-        ...x,
-        netText: formatYi(x.mainNet),
+        code: x.code,
+        name: x.name,
+        mainNet: x.mainNet,
+        mainNetRate: x.mainNetRate,
+        changePct: x.changePct,
+        superNet: x.superNet,
+        largeNet: x.largeNet,
+        midNet: x.midNet,
+        smallNet: x.smallNet,
+        displayName: maskFinanceWords(x.name),
+        netText: formatQty(x.mainNet),
         pctText: formatPct(x.changePct),
         netCls: signedClass(x.mainNet),
         pctCls: signedClass(x.changePct),
         bg: heatColor(x.mainNet, maxAbs),
       })),
       stocksView: filtered.slice(0, 20).map((x, i) => ({
-        ...x,
+        code: x.code,
+        name: x.name,
+        mainNet: x.mainNet,
+        mainNetRate: x.mainNetRate,
+        changePct: x.changePct,
+        superNet: x.superNet,
+        largeNet: x.largeNet,
+        midNet: x.midNet,
+        smallNet: x.smallNet,
+        displayName: aliasSampleName(x.name),
         rank: String(i + 1).padStart(2, "0"),
-        netText: formatYi(x.mainNet),
+        netText: formatQty(x.mainNet),
         pctText: formatPct(x.changePct),
         netCls: signedClass(x.mainNet),
         pctCls: signedClass(x.changePct),
         bar: `${Math.min(100, (Math.abs(x.mainNet) / topAbs) * 100)}%`,
         barColor: x.mainNet >= 0 ? "#ff3b5c" : "#19e6a0",
       })),
+      etfsView: filteredEtfs.slice(0, 20).map((x, i) => ({
+        code: x.code,
+        name: x.name,
+        mainNet: x.mainNet,
+        mainNetRate: x.mainNetRate,
+        changePct: x.changePct,
+        superNet: x.superNet,
+        largeNet: x.largeNet,
+        midNet: x.midNet,
+        smallNet: x.smallNet,
+        displayName: maskFinanceWords(x.name),
+        rank: String(i + 1).padStart(2, "0"),
+        netText: formatQty(x.mainNet),
+        pctText: formatPct(x.changePct),
+        netCls: signedClass(x.mainNet),
+        pctCls: signedClass(x.changePct),
+        bar: `${Math.min(100, (Math.abs(x.mainNet) / etfAbs) * 100)}%`,
+        barColor: x.mainNet >= 0 ? "#ff3b5c" : "#19e6a0",
+      })),
     });
-  },
-
-  drawSpark() {
-    const series = this._shSeries || [];
-    if (series.length < 2) return;
-    const query = wx.createSelectorQuery();
-    query
-      .select("#spark")
-      .fields({ node: true, size: true })
-      .exec((res) => {
-        if (!res[0] || !res[0].node) return;
-        const canvas = res[0].node;
-        const ctx = canvas.getContext("2d");
-        const sys = wx.getWindowInfo ? wx.getWindowInfo() : wx.getSystemInfoSync();
-        const dpr = sys.pixelRatio || 2;
-        const w = res[0].width;
-        const h = res[0].height;
-        canvas.width = w * dpr;
-        canvas.height = h * dpr;
-        ctx.scale(dpr, dpr);
-        ctx.clearRect(0, 0, w, h);
-        const min = Math.min(...series);
-        const max = Math.max(...series);
-        const span = max - min || 1;
-        ctx.beginPath();
-        series.forEach((v, i) => {
-          const x = (i / (series.length - 1)) * w;
-          const y = h - ((v - min) / span) * (h - 4) - 2;
-          if (i === 0) ctx.moveTo(x, y);
-          else ctx.lineTo(x, y);
-        });
-        ctx.strokeStyle = (series[series.length - 1] || 0) >= 0 ? "#ff3b5c" : "#19e6a0";
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-      });
   },
 
   setTab(e) {
@@ -244,23 +262,40 @@ Page({
     this.openDetail(item, "stock");
   },
 
+  openEtf(e) {
+    const item = e.currentTarget.dataset.item;
+    this.openDetail(item, "etf");
+  },
+
   async openDetail(item, kind) {
     const parts = [
-      { k: "超大单", v: item.superNet, c: "#ff3b5c" },
-      { k: "大单", v: item.largeNet, c: "#ff7a93" },
-      { k: "中单", v: item.midNet, c: "#3df2ff" },
-      { k: "小单", v: item.smallNet, c: "#19e6a0" },
+      { k: "档位甲", v: item.superNet, c: "#ff3b5c" },
+      { k: "档位乙", v: item.largeNet, c: "#ff7a93" },
+      { k: "档位丙", v: item.midNet, c: "#3df2ff" },
+      { k: "档位丁", v: item.smallNet, c: "#19e6a0" },
     ];
     const total = parts.reduce((s, p) => s + Math.abs(p.v), 0) || 1;
+    const displayName =
+      kind === "stock" ? aliasSampleName(item.name) : maskFinanceWords(item.name);
     this.setData({
-      picked: item,
+      picked: {
+        code: item.code,
+        mainNet: item.mainNet,
+        mainNetRate: item.mainNetRate,
+        changePct: item.changePct,
+        superNet: item.superNet,
+        largeNet: item.largeNet,
+        midNet: item.midNet,
+        smallNet: item.smallNet,
+        displayName,
+      },
       pickedKind: kind,
-      pickedNet: formatYi(item.mainNet),
+      pickedNet: formatQty(item.mainNet),
       pickedNetClass: signedClass(item.mainNet),
-      pickedPct: `涨跌幅 ${formatPct(item.changePct)} · 净占比 ${formatPct(item.mainNetRate)}（公开数据）`,
+      pickedPct: `变动比 ${formatPct(item.changePct)} · 占比 ${formatPct(item.mainNetRate)}`,
       parts: parts.map((p) => ({
         ...p,
-        text: formatYi(p.v),
+        text: formatQty(p.v),
         cls: signedClass(p.v),
         width: `${(Math.abs(p.v) / total) * 100}%`,
         opacity: p.v >= 0 ? 1 : 0.4,
@@ -279,9 +314,18 @@ Page({
         });
         this.setData({
           membersView: data.list.map((x, i) => ({
-            ...x,
+            code: x.code,
+            name: x.name,
+            mainNet: x.mainNet,
+            mainNetRate: x.mainNetRate,
+            changePct: x.changePct,
+            superNet: x.superNet,
+            largeNet: x.largeNet,
+            midNet: x.midNet,
+            smallNet: x.smallNet,
+            displayName: maskFinanceWords(x.name),
             rank: String(i + 1).padStart(2, "0"),
-            netText: formatYi(x.mainNet),
+            netText: formatQty(x.mainNet),
             netCls: signedClass(x.mainNet),
           })),
         });
