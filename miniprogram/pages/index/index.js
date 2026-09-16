@@ -14,6 +14,11 @@ const {
   aliasSampleName,
   maskFinanceWords,
 } = require("../../utils/format");
+const {
+  shareAppMessage,
+  shareTimeline,
+  enableShareMenu,
+} = require("../../utils/share");
 
 const PERIODS = [
   { id: "today", label: "当日" },
@@ -66,6 +71,7 @@ Page({
     this._rawEtfs = [];
     this._indices = [];
     this.setData({ showGate: !wx.getStorageSync("disclaimer_ok") });
+    enableShareMenu();
     this.load();
     this._clock = setInterval(() => this.tick(), 1000);
     this._refresh = setInterval(() => this.load(), 20000);
@@ -75,6 +81,14 @@ Page({
   onUnload() {
     clearInterval(this._clock);
     clearInterval(this._refresh);
+  },
+
+  onShareAppMessage() {
+    return shareAppMessage();
+  },
+
+  onShareTimeline() {
+    return shareTimeline();
   },
 
   tick() {
