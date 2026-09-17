@@ -1,9 +1,24 @@
 const { toNumber } = require("./format");
+const cloudConfig = require("../config/cloud");
+const CLOUD_ENV = cloudConfig.env;
+const CLOUD_SERVICE = cloudConfig.service;
 
 const HOSTS = [
   "https://push2delay.eastmoney.com",
   "https://push2.eastmoney.com",
 ];
+
+function shouldUseCloud() {
+  const mode = cloudConfig.useCloud;
+  if (mode === true) return true;
+  if (mode === false) return false;
+  try {
+    const envVersion = wx.getAccountInfoSync().miniProgram.envVersion;
+    return envVersion !== "develop";
+  } catch (e) {
+    return true;
+  }
+}
 
 const PERIOD_FIELDS = {
   today: {
@@ -92,15 +107,68 @@ function periodFieldList(period) {
   ].join(",");
 }
 
-function requestJson(url) {
+function requestDirect(pathAndQuery) {
+  let lastError = "empty reply";
   return new Promise((resolve, reject) => {
-    wx.request({
-      url,
+    const run = (index) => {
+      if (index >= HOSTS.length) {
+        reject(new Error(lastError));
+        return;
+      }
+      wx.request({
+        url: `${HOSTS[index]}${pathAndQuery}`,
+        method: "GET",
+        timeout: 8000,
+        success(res) {
+          if (res.statusCode === 200) resolve(res.data);
+          else {
+            lastError = `HTTP ${res.statusCode}`;
+            run(index + 1);
+          }
+        },
+        fail(err) {
+          lastError = err.errMsg || "请求失败";
+          run(index + 1);
+        },
+      });
+    };
+    run(0);
+  });
+}
+
+function requestCloud(pathAndQuery) {
+  return new Promise((resolve, reject) => {
+    if (!wx.cloud || !wx.cloud.callContainer) {
+      reject(new Error("云能力未初始化"));
+      return;
+    }
+    wx.cloud.callContainer({
+      config: { env: CLOUD_ENV },
+      path: `/api/proxy?p=${encodeURIComponent(pathAndQuery)}`,
       method: "GET",
-      timeout: 8000,
+      header: {
+        "X-WX-SERVICE": CLOUD_SERVICE,
+      },
       success(res) {
-        if (res.statusCode === 200) resolve(res.data);
-        else reject(new Error(`HTTP ${res.statusCode}`));
+        if (res.statusCode !== 200) {
+          reject(new Error(`HTTP ${res.statusCode}`));
+          return;
+        }
+        const data = res.data;
+        if (typeof data === "string") {
+          try {
+            resolve(JSON.parse(data));
+            return;
+          } catch (e) {
+            reject(new Error("响应解析失败"));
+            return;
+          }
+        }
+        if (data && data.error) {
+          reject(new Error(data.error));
+          return;
+        }
+        resolve(data);
       },
       fail(err) {
         reject(new Error(err.errMsg || "请求失败"));
@@ -109,16 +177,17 @@ function requestJson(url) {
   });
 }
 
+function requestJson(pathAndQuery) {
+  return shouldUseCloud() ? requestCloud(pathAndQuery) : requestDirect(pathAndQuery);
+}
+
 async function eastmoneyJson(pathAndQuery) {
-  let lastError = "empty reply";
-  for (const host of HOSTS) {
-    try {
-      return await requestJson(`${host}${pathAndQuery}`);
-    } catch (error) {
-      lastError = error instanceof Error ? error.message : "fetch failed";
-    }
+  try {
+    return await requestJson(pathAndQuery);
+  } catch (error) {
+    const lastError = error instanceof Error ? error.message : "fetch failed";
+    throw new Error(`数据暂不可用：${lastError}`);
   }
-  throw new Error(`数据暂不可用：${lastError}`);
 }
 
 function mapRow(item, period) {

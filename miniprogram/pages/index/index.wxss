@@ -185,10 +185,26 @@
   letter-spacing: 1rpx;
 }
 
+.share-link {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: none;
+  line-height: inherit;
+  font-size: 22rpx;
+  color: #3df2ff;
+  letter-spacing: 1rpx;
+}
+
+.share-link::after {
+  border: none;
+}
+
 .legal-links {
   display: flex;
   flex-wrap: wrap;
   gap: 20rpx;
+  align-items: center;
   margin-top: 16rpx;
   color: #3df2ff;
   font-size: 22rpx;

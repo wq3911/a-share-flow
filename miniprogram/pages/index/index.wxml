@@ -41,7 +41,7 @@
         <view class="kpi-sub {{topStockClass}}">{{topStockNet}}</view>
       </view>
       <view class="panel">
-        <view class="kpi-label">靠前ETF</view>
+        <view class="kpi-label">靠前米缸</view>
         <view class="kpi-value small">{{topEtfName}}</view>
         <view class="kpi-label">{{topEtfCode}}</view>
         <view class="kpi-sub {{topEtfClass}}">{{topEtfNet}}</view>
@@ -113,7 +113,7 @@
     </view>
 
     <view class="panel" wx:if="{{tab === 'etf'}}">
-      <view class="kpi-label">ETF观察</view>
+      <view class="kpi-label">米缸观察</view>
       <view
         wx:for="{{etfsView}}"
         wx:key="code"
@@ -139,6 +139,7 @@
       <text bindtap="goAgreement">用户协议</text>
       <text bindtap="goPrivacy">隐私政策</text>
       <text bindtap="goDisclaimer">使用说明</text>
+      <button class="share-link" open-type="share">分享给好友</button>
     </view>
   </view>
 
@@ -146,13 +147,13 @@
     <view class="tab {{tab === 'radar' ? 'on' : ''}}" data-tab="radar" bindtap="setTab">看板</view>
     <view class="tab {{tab === 'board' ? 'on' : ''}}" data-tab="board" bindtap="setTab">主题</view>
     <view class="tab {{tab === 'stock' ? 'on' : ''}}" data-tab="stock" bindtap="setTab">样本</view>
-    <view class="tab {{tab === 'etf' ? 'on' : ''}}" data-tab="etf" bindtap="setTab">ETF</view>
+    <view class="tab {{tab === 'etf' ? 'on' : ''}}" data-tab="etf" bindtap="setTab">米缸</view>
     <view class="tab" bindtap="goAbout">关于</view>
   </view>
 
   <view wx:if="{{picked}}" class="mask" bindtap="closeDetail"></view>
   <view wx:if="{{picked}}" class="drawer">
-    <view class="kpi-label">{{pickedKind === 'board' ? '主题详情' : (pickedKind === 'etf' ? 'ETF详情' : '结构观察')}}</view>
+    <view class="kpi-label">{{pickedKind === 'board' ? '主题详情' : (pickedKind === 'etf' ? '米缸详情' : '结构观察')}}</view>
     <view class="drawer-title">{{picked.displayName}}</view>
     <view class="kpi-label" wx:if="{{picked.code}}">{{picked.code}}</view>
     <view class="kpi-value {{pickedNetClass}}">{{pickedNet}}</view>
